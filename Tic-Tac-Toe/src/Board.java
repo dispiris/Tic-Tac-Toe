@@ -11,7 +11,7 @@ import javax.swing.Timer;
 public class Board {
 	
 	public static final int GRID_SIZE = 100;
-	public static final int THINKING_DEPTH = 2;
+	public static final boolean debug = false;
 	
 	private Mark[][] board;
 	private JFrame frame;
@@ -19,13 +19,14 @@ public class Board {
 	private boolean nextMoveLegal;
 	private int stepCount;
 	private boolean gameover;
-	
+	private final int THINKING_DEPTH;
 	private int bestX;
 	private int bestY;
 	
-	public Board() {
+	public Board(int level, boolean humanFirst) {
 		board = new Mark[3][3];
 		nextMoveLegal = true;
+		THINKING_DEPTH = level;
 		frame = new JFrame("Tic-Tac-Toe");
 		frame.setLayout(new GridLayout(3, 3));
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -66,9 +67,12 @@ public class Board {
 		frame.pack();
 		frame.setResizable(false);
 		frame.setVisible(true);
+		
+		if (!humanFirst) {
+			setNext();
+		}
 	}
 	
-	// range: 0-2
 	public void set(int x, int y, Mark m) {
 		if (!validPosition(x, y)) {
 			System.out.println("invalid position");
@@ -80,7 +84,6 @@ public class Board {
 		}
 	}
 	
-	// returns true if game over
 	private void checkGameStatus() {
 		if (stepCount == 9) {
 			System.out.println("DRAW");
@@ -165,7 +168,7 @@ public class Board {
 	private int minimax(Mark[][] board, int depth, int original, int alpha, int beta, boolean maxPlayer) {
 		if (depth == 0 || winner(board) != null) {
 			int eval = evaluate(board);
-//			System.out.println("this is a leaf and eval = " + eval);
+			if (debug)	System.out.println("this is a leaf and eval = " + eval);
 			return eval;
 		}
 		
@@ -175,23 +178,23 @@ public class Board {
 			for (int i = 0; i < 3; i++) {
 				for (int j = 0; j < 3; j++) {
 					if (board[i][j] == null) {
-//						System.out.println("maxplayer/o at depth "+depth+" at position (" + i + ", " + j + "); ");
+						if (debug)	System.out.println("maxplayer/o at depth "+depth+" at position (" + i + ", " + j + "); ");
 						board[i][j] = Mark.o;
 						int eval = minimax(board, depth - 1, original, alpha, beta, false);
 						board[i][j] = null;
 						if (eval > maxEval) {
 							maxEval = eval;
-//							System.out.println("! maxEval updated to " + maxEval);
+							if (debug)	System.out.println("! maxEval updated to " + maxEval);
 							if (depth == original) {
 								bestX = i;
 								bestY = j;
-//								System.out.println("!!!best x & y updated to: " + bestX + " " + bestY);
+								if (debug)	System.out.println("!!!best x & y updated to: " + bestX + " " + bestY);
 							}
 						}
 						
 						alpha = Math.max(alpha, eval);
 						if (beta <= alpha) {
-//							System.out.println("break the loop");
+							if (debug)	System.out.println("break the loop");
 							break outerloop;
 						} 
 					} 
@@ -204,17 +207,17 @@ public class Board {
 			for (int i = 0; i < 3; i++) {	
 				for (int j = 0; j < 3; j++) {
 					if (board[i][j] == null) {
-//						System.out.println("minplayer/x at depth "+depth+" at position (" + i + ", " + j + "); ");
+						if (debug)	System.out.println("minplayer/x at depth "+depth+" at position (" + i + ", " + j + "); ");
 						board[i][j] = Mark.x;
 						int eval = minimax(board, depth - 1, original, alpha, beta, true);
 						board[i][j] = null;
 						if (eval < minEval) {
 							minEval = eval;
-//							System.out.println("! minEval updated to " + minEval);
+							if (debug)	System.out.println("! minEval updated to " + minEval);
 						}
 						beta = Math.min(beta, eval);
 						if (beta <= alpha) {
-//							System.out.println("break the loop");
+							if (debug)	System.out.println("break the loop");
 							break outerloop;
 						} 
 					} 
@@ -225,18 +228,16 @@ public class Board {
 	}
 	
 	private void setNext() {
-//		int x = rand.nextInt(3);
-//		int y = rand.nextInt(3);
-//		while (!validPosition(x, y)) {
-//			x = rand.nextInt(3);
-//			y = rand.nextInt(3);
-//		}
-		System.out.println();
-		System.out.println();
-		System.out.println();
-//		System.out.println("	current eval: " + evaluate(board));
-//		System.out.println("minimax eval: " + minimax(board, THINKING_DEPTH, THINKING_DEPTH, -100000000, 100000000, true));
-		minimax(board, THINKING_DEPTH, THINKING_DEPTH, -100000000, 100000000, true);
+		if (debug) {
+			System.out.println();
+			System.out.println();
+			System.out.println();
+			System.out.println("	current eval: " + evaluate(board));
+			System.out.println("minimax eval: "
+					+ minimax(board, THINKING_DEPTH, THINKING_DEPTH, -100000000, 100000000, true));
+		} else {
+			minimax(board, THINKING_DEPTH, THINKING_DEPTH, -100000000, 100000000, true);
+		}
 		set(bestX, bestY, Mark.o);
 	}
 	
@@ -258,19 +259,88 @@ public class Board {
 		} else if (oCount == 2) {
 			return 10_000;
 		} else if (oCount == 1) {
-			return 1_000;
+//			return 1_000;
+			return 0;
 		} else if (xCount == 3) {
 			return -100_000;
 		} else if (xCount == 2) {
 			return -10_000;
 		} else {	// xCount == 1
-			return -1_000;
+			return 0;
 		} 
 	}
 	
 	public static void main(String[] args) {
-		Board board = new Board();
+//		JFrame frame1 = new JFrame("setup");
+//		frame1.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//		frame1.setLocationRelativeTo(null);
+//		frame1.setLayout(new GridLayout(3,1));
+//		JButton into = new JButton("who's first?");
+//		into.setFont(new Font("Arial", Font.PLAIN, 100));
+//		into.setEnabled(false);
+//		frame1.add(into);
+//		JButton me = new JButton("me");
+//		me.setFont(new Font("Arial", Font.PLAIN, 100));
+//		me.addActionListener(new ActionListener() {
+//			@Override
+//			public void actionPerformed(ActionEvent e) {
+//				meFirst = true;
+//			}
+//		});
+//		
 		
+		JFrame frame = new JFrame("choose difficulty");
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setLocationRelativeTo(null);
+		frame.setLayout(new GridLayout(4,1));
+		
+		JButton b1 = new JButton("easy");
+		b1.setFont(new Font("Arial", Font.PLAIN, 100));
+		b1.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new Board(1, false);
+				frame.setVisible(false);
+			}
+		});
+		
+		JButton b2 = new JButton("normal");
+		b2.setFont(new Font("Arial", Font.PLAIN, 100));
+		b2.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new Board(2, false);
+				frame.setVisible(false);
+			}
+		});
+		
+		JButton b3 = new JButton("difficult");
+		b3.setFont(new Font("Arial", Font.PLAIN, 100));
+		b3.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new Board(6, false);
+				frame.setVisible(false);
+			}
+		});
+		
+		JButton b4 = new JButton("impossible");
+		b4.setFont(new Font("Arial", Font.PLAIN, 100));
+		b4.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new Board(9, false);
+				frame.setVisible(false);
+			}
+		});
+		
+		frame.add(b1);
+		frame.add(b2);
+		frame.add(b3);
+		frame.add(b4);
+		frame.pack();
+		frame.setResizable(false);
+		frame.setVisible(true);
 	}
 
 }
